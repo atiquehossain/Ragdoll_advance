@@ -1,10 +1,6 @@
 package pbgLecture4lab;
 
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Graphics2D;
-import java.awt.Toolkit;
+import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +38,9 @@ public class BasicPhysicsEngine {
     private Body segwayFrame;
     private Body frontWheel;
     private Body rearWheel;
+    private double wheelRotation = 0.0;
+    private int score = 0;  // To keep track of the score
+
 
     // sleep time between two drawn frames in milliseconds
     public static final int DELAY = 20;
@@ -117,14 +116,14 @@ public class BasicPhysicsEngine {
         bodies = new ArrayList<>();
         LayoutMode layout = LayoutMode.RECTANGLE;
 
-        world = new World(new Vec2(0, GRAVITY)); // Initialize the world with gravity
+        world = new World(new Vec2(0, GRAVITY));
 
-        // Initialize the obstacles
         initializeObstacles();
 
         // Create the person body
         createPerson();
         createSegway();
+        attachPersonToSegway();
 
         // Define barriers based on layout
         defineBarriers(layout);
@@ -135,15 +134,15 @@ public class BasicPhysicsEngine {
         double groundY = SCREEN_HEIGHT - groundHeight;
 
         // Initialize the first obstacle
-        obstacleWidth[0] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
-        obstacleHeight[0] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
+        obstacleWidth[0] = 20 + Math.random() * 40;
+        obstacleHeight[0] = 20 + Math.random() * 40;
         obstacleX[0] = Math.random() * (5 - obstacleWidth[0]);
         obstacleY[0] = groundY - obstacleHeight[0];
 
-        // Initialize the second obstacle
+
         do {
-            obstacleWidth[1] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
-            obstacleHeight[1] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
+            obstacleWidth[1] = 20 + Math.random() * 40;
+            obstacleHeight[1] = 20 + Math.random() * 40;
             obstacleX[1] = Math.random() * (900 - obstacleWidth[1]);
             obstacleY[1] = groundY - obstacleHeight[1];
         } while (Math.abs(obstacleX[1] - obstacleX[0]) < obstacleWidth[0] + obstacleWidth[1]);
@@ -155,17 +154,38 @@ public class BasicPhysicsEngine {
         for (int i = 0; i < 2; i++) {
             obstacleX[i] -= speed;
             if (obstacleX[i] < 0) {
-                obstacleX[i] = SCREEN_WIDTH; // Wrap-around to the other side of the screen
+                obstacleX[i] = SCREEN_WIDTH;
+                score++;
             }
         }
     }
 
 
+// jump functiion
     public void jumpSegwayPerson() {
-        Vec2 jumpForce = new Vec2(0, 5);
+        Vec2 jumpForce = new Vec2(0, 5);  // The impulse vector (upward force)
+
+        // Apply the impulse to the Segway frame at its center of mass
+        segwayFrame.applyLinearImpulse(jumpForce, segwayFrame.getWorldCenter());
         person.applyLinearImpulse(jumpForce, person.getWorldCenter());
-      //  person.applyLinearImpulse(jumpForce, person.getWorldCenter());
+
+
     }
+
+
+    //// attaching person and Segway to jump
+    /// trying   to jump
+    private void attachPersonToSegway() {
+        RevoluteJointDef jointDef = new RevoluteJointDef();
+        jointDef.bodyA = segwayFrame;
+        jointDef.bodyB = person;
+        jointDef.localAnchorA.set(0, 1.0f); // Set the anchor relative to the Segway frame
+        jointDef.localAnchorB.set(0, 0);    // Set the anchor relative to the person
+        jointDef.collideConnected = false;
+        world.createJoint(jointDef);
+    }
+
+
 
 
 
@@ -232,10 +252,7 @@ public class BasicPhysicsEngine {
 
     public void update() {
         if (gameOver) return;
-        // Move obstacles if right key is pressed
-        if (BasicKeyListener.isRotateRightKeyPressed()) {
-            moveObstacleCloser(1.1);
-        }
+        moveObstacleCloser(0.05);
         world.step(1.0f / 60.0f, 6, 2);
         checkCollisionWithObstacles();
         for (BasicParticle p : particles) {
@@ -306,7 +323,7 @@ public class BasicPhysicsEngine {
 
 
     private void showGameOverPopup() {
-        JOptionPane.showMessageDialog(null, "Game Over! ");
+        JOptionPane.showMessageDialog(null, "Game Over! Your score is "+score);
         System.exit(0);  // Exits the application after the game over popup
     }
 
@@ -401,6 +418,7 @@ public class BasicPhysicsEngine {
         drawObstacles(g);
         drawSegway(g);
         drawPerson(g);
+        drawScore(g);
     }
 
     private void drawPerson(Graphics2D g) {
@@ -482,7 +500,7 @@ public class BasicPhysicsEngine {
 
         // Define the handle dimensions
         double handleWidth = 0.1 * SCALE;
-        double handleHeight = 2 * SCALE;
+        double handleHeight = 2.6 * SCALE;
 
         // Calculate the base point of the handle on the frame
         double handleBaseX = frameX + frameWidth / 2; // Right end of the frame
@@ -492,7 +510,7 @@ public class BasicPhysicsEngine {
         g.translate(handleBaseX, handleBaseY);
 
         // Rotate by 30 degrees (in radians: Math.toRadians(30))
-        g.rotate(Math.toRadians(25));
+        g.rotate(Math.toRadians(20));
 
         // Draw the rotated handle
         g.setColor(Color.DARK_GRAY); // Handle color
@@ -511,33 +529,47 @@ public class BasicPhysicsEngine {
     private void drawWheel(Graphics2D g, Body wheel, float scale, double groundY) {
         Vec2 wheelPos = wheel.getPosition();
         double wheelX = wheelPos.x * scale;
-        double wheelY = groundY - (0.5 * scale); // Position the wheel just above the ground
         double wheelRadius = 0.5 * scale;
+        double wheelY = groundY - wheelRadius; // Adjust Y to align the wheel bottom with the ground
 
-        // Draw the tire (outer circle)
-        g.setColor(Color.DARK_GRAY);
-        double tireRadius = wheelRadius + 0.1 * scale; // Slightly larger radius for the tire
-        g.fillOval((int) (wheelX - tireRadius), (int) (wheelY - tireRadius), (int) (2 * tireRadius), (int) (2 * tireRadius));
+        // Use the drawSpinningWheel method to draw the spinning wheel
+        drawSpinningWheel(g, wheelX, wheelY, wheelRadius);
+    }
 
-        // Draw the wheel rim (inner circle)
-        g.setColor(Color.BLACK);
-        g.fillOval((int) (wheelX - wheelRadius), (int) (wheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+    private void drawSpinningWheel(Graphics g, double x, double y, double radius) {
+        Graphics2D g2d = (Graphics2D) g;
+        AffineTransform old = g2d.getTransform();
 
-        // Draw the wheel hub (smaller circle in the center)
-        g.setColor(Color.GRAY);
-        double hubRadius = 0.2 * scale;
-        g.fillOval((int) (wheelX - hubRadius), (int) (wheelY - hubRadius), (int) (2 * hubRadius), (int) (2 * hubRadius));
+        // Translate to the center of the wheel, ensuring that the wheel bottom aligns with the ground
+        g2d.translate(x, y);
+
+        // Rotate the wheel
+        wheelRotation += 0.1; // Increment rotation for animation
+        g2d.rotate(wheelRotation);
+
+        // Draw the wheel (centered at the origin after translation)
+        g2d.setColor(Color.BLACK);
+        g2d.fillOval((int) -radius, (int) -radius, (int) (2 * radius), (int) (2 * radius));
 
         // Draw the spokes
-        g.setStroke(new BasicStroke(2)); // Set stroke for the spokes
-        g.setColor(Color.LIGHT_GRAY);
-        for (int i = 0; i < 8; i++) { // 8 spokes
-            double angle = Math.toRadians(i * 45); // Spokes at every 45 degrees
-            double spokeX = Math.cos(angle) * wheelRadius;
-            double spokeY = Math.sin(angle) * wheelRadius;
-            g.drawLine((int) wheelX, (int) wheelY, (int) (wheelX + spokeX), (int) (wheelY + spokeY));
+        g2d.setColor(Color.GRAY);
+        for (int i = 0; i < 6; i++) {
+            g2d.drawLine(0, 0, (int) radius, 0);
+            g2d.rotate(Math.PI / 3); // Rotate by 60 degrees for the next spoke
         }
+
+        g2d.setTransform(old); // Restore the original transform
     }
+
+    private void drawScore(Graphics2D g) {
+        g.setColor(Color.WHITE);  // Set the text color
+        g.setFont(new Font("Arial", Font.BOLD, 20));  // Set the font
+        g.drawString("Score: " + score, 10, 30);  // Draw the score at the top left
+    }
+
+
+
+
 
 
     private void drawGround(Graphics2D g) {
