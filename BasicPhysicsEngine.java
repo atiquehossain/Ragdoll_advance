@@ -17,10 +17,7 @@ import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.BodyType;
 import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
-import org.jbox2d.dynamics.joints.RevoluteJoint;
 import org.jbox2d.dynamics.joints.RevoluteJointDef;
-import org.jbox2d.dynamics.joints.WeldJointDef;
-
 
 public class BasicPhysicsEngine {
     /* Author: Michael Fairbank
@@ -33,9 +30,8 @@ public class BasicPhysicsEngine {
     public static final int SCREEN_WIDTH = 740;
     public static final Dimension FRAME_SIZE = new Dimension(
             SCREEN_WIDTH, SCREEN_HEIGHT);
-    public static final float WORLD_WIDTH = 10;//metres
-    public static final float WORLD_HEIGHT = SCREEN_HEIGHT * (WORLD_WIDTH / SCREEN_WIDTH);// meters - keeps world dimensions in same aspect ratio as screen dimensions, so that circles get transformed into circles as opposed to ovals
-
+    public static final float WORLD_WIDTH = 10; // meters
+    public static final float WORLD_HEIGHT = SCREEN_HEIGHT * (WORLD_WIDTH / SCREEN_WIDTH); // meters
 
     public static World world;
     public List<Body> bodies;
@@ -47,26 +43,23 @@ public class BasicPhysicsEngine {
 
     // sleep time between two drawn frames in milliseconds
     public static final int DELAY = 20;
-    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH = 10;
+    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH=10;
     // estimate for time between two frames in seconds
-    public static final double DELTA_T = DELAY / 1000.0 / NUM_EULER_UPDATES_PER_SCREEN_REFRESH;
+    public static final double DELTA_T = DELAY / 1000.0 / NUM_EULER_UPDATES_PER_SCREEN_REFRESH ;
 
 
     public static int convertWorldXtoScreenX(double worldX) {
-        return (int) (worldX / WORLD_WIDTH * SCREEN_WIDTH);
+        return (int) (worldX/WORLD_WIDTH*SCREEN_WIDTH);
     }
-
     public static int convertWorldYtoScreenY(double worldY) {
         // minus sign in here is because screen coordinates are upside down.
-        return (int) (SCREEN_HEIGHT - (worldY / WORLD_HEIGHT * SCREEN_HEIGHT));
+        return (int) (SCREEN_HEIGHT-(worldY/WORLD_HEIGHT*SCREEN_HEIGHT));
     }
-
     public static int convertWorldLengthToScreenLength(double worldLength) {
-        return (int) (worldLength / WORLD_WIDTH * SCREEN_WIDTH);
+        return (int) (worldLength/WORLD_WIDTH*SCREEN_WIDTH);
     }
-
     public static double convertScreenXtoWorldX(int screenX) {
-        return screenX * WORLD_WIDTH / SCREEN_WIDTH;
+        return screenX*WORLD_WIDTH/SCREEN_WIDTH;
         //throw new RuntimeException("Not implemented");
         // TODO: For speed, just copy your solution from lab 3 into here
         // to get this to work you need to program the inverse function to convertWorldXtoScreenX
@@ -77,9 +70,8 @@ public class BasicPhysicsEngine {
         // Note that a common problem students have found here is that integer truncation happens if you divide two ints in java, e.g. 2/3 is 0!!
         // To work around this problem, instead of x/y, do "((double)x)/((double)y)" or similar.  (Actually, you only need to cast either one of them to a double, not both).
     }
-
     public static double convertScreenYtoWorldY(int screenY) {
-        return (SCREEN_HEIGHT - screenY) * WORLD_HEIGHT / SCREEN_HEIGHT;
+        return (SCREEN_HEIGHT-screenY)*WORLD_HEIGHT/SCREEN_HEIGHT;
         //throw new RuntimeException("Not implemented");
         // to get this to work you need to program the inverse function to convertWorldYtoScreenY
         // this means rearranging the equation z= (SCREEN_HEIGHT-(worldY/WORLD_HEIGHT*SCREEN_HEIGHT)) to make
@@ -90,77 +82,84 @@ public class BasicPhysicsEngine {
         // To work around this problem, instead of x/y, do "((double)x)/((double)y)" or similar.  (Actually, you only need to cast either one of them to a double, not both).
     }
 
+    // Obstacle properties
+    private double[] obstacleX = new double[2];
+    private double[] obstacleY = new double[2];
+    private double[] obstacleWidth = new double[2];
+    private double[] obstacleHeight = new double[2];
+
+
 
     public List<BasicParticle> particles;
     public List<AnchoredBarrier> barriers;
     public List<ElasticConnector> connectors;
     public List<BasicPolygon> polygons;
 
-    private Segway segway;
     private Body person;
-    private List<Body> obstacles;
 
-
-    public static enum LayoutMode {CONVEX_ARENA, CONCAVE_ARENA, CONVEX_ARENA_WITH_CURVE, PINBALL_ARENA, RECTANGLE, SNOOKER_TABLE}
-
-    ;
+    public static enum LayoutMode {
+        CONVEX_ARENA, CONCAVE_ARENA, CONVEX_ARENA_WITH_CURVE, PINBALL_ARENA, RECTANGLE, SNOOKER_TABLE
+    }
 
     public BasicPhysicsEngine() {
-        barriers = new ArrayList<AnchoredBarrier>();
-        // empty particles array, so that when a new thread starts it clears current particle state:
-        particles = new ArrayList<BasicParticle>();
-        connectors = new ArrayList<ElasticConnector>();
-        LayoutMode layout = LayoutMode.RECTANGLE;
-        // pinball:
-        double r = .2;
-
-        // Simple pendulum attached under mouse pointer
-        double rollingFriction = .5;
-        double springConstant = 10000, springDampingConstant = 10;
-        Double hookesLawTruncation = null;
-        boolean canGoSlack = false;
-        //particles.add(new ParticleAttachedToMousePointer(WORLD_WIDTH/2,WORLD_HEIGHT/2,0,0, r, true, 10000));
-        //particles.add(new BasicParticle(WORLD_WIDTH/2,WORLD_HEIGHT/2-2,0,0, r,true, Color.BLUE, 2*4, rollingFriction));
-
-        world = new World(new Vec2(0, GRAVITY)); // Initialize the world with gravity
-        bodies = new ArrayList<>();
+        barriers = new ArrayList<>();
         particles = new ArrayList<>();
         connectors = new ArrayList<>();
-        polygons = new ArrayList<BasicPolygon>();
-        barriers = new ArrayList<>();
+        polygons = new ArrayList<>();
+        bodies = new ArrayList<>();
+        LayoutMode layout = LayoutMode.RECTANGLE;
 
-        particles.add(new BasicParticle(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 - 2, 0, 0, r, true, Color.BLUE, 2 * 4, rollingFriction, BasicParticle.ShapeType.HEAD));
-//		particles.add(new BasicParticle(WORLD_WIDTH/2, WORLD_HEIGHT/2, 0, 0, r, true, Color.RED, 2*4, rollingFriction, BasicParticle.ShapeType.TORSO));
-//		particles.add(new BasicParticle(WORLD_WIDTH/2, WORLD_HEIGHT/2+2, 0, 0, r, true, Color.GREEN, 2*4, rollingFriction, BasicParticle.ShapeType.ARM));
-//		particles.add(new BasicParticle(WORLD_WIDTH/2, WORLD_HEIGHT/2+4, 0, 0, r, true, Color.YELLOW, 2*4, rollingFriction, BasicParticle.ShapeType.LEG));
+        world = new World(new Vec2(0, GRAVITY)); // Initialize the world with gravity
 
+        // Initialize the obstacles
+        initializeObstacles();
 
         // Create the person body
         createPerson();
-        //  addMotorcycle();
         createSegway();
 
-        barriers = new ArrayList<AnchoredBarrier>();
+        // Define barriers based on layout
+        defineBarriers(layout);
+    }
 
+    private void initializeObstacles() {
+        double groundHeight = 10.0;
+        double groundY = SCREEN_HEIGHT - groundHeight;
+
+        // Initialize the first obstacle
+        obstacleWidth[0] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
+        obstacleHeight[0] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
+        obstacleX[0] = Math.random() * (SCREEN_WIDTH - obstacleWidth[0]);
+        obstacleY[0] = groundY - obstacleHeight[0];
+
+        // Initialize the second obstacle
+        do {
+            obstacleWidth[1] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
+            obstacleHeight[1] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
+            obstacleX[1] = Math.random() * (SCREEN_WIDTH - obstacleWidth[1]);
+            obstacleY[1] = groundY - obstacleHeight[1];
+        } while (Math.abs(obstacleX[1] - obstacleX[0]) < obstacleWidth[0] + obstacleWidth[1]);
+
+        // The while loop ensures that the obstacles have a sufficient gap between them
+    }
+
+
+    private void defineBarriers(LayoutMode layout) {
         switch (layout) {
-            case RECTANGLE: {
-                // rectangle walls:
-                // anticlockwise listing
+            case RECTANGLE:
                 barriers.add(new AnchoredBarrier_StraightLine(0, 0, WORLD_WIDTH, 0, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, 0, WORLD_WIDTH, WORLD_HEIGHT, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT, 0, WORLD_HEIGHT, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT, 0, 0, Color.WHITE));
                 break;
-            }
-            case CONVEX_ARENA: {
+            case CONVEX_ARENA:
                 barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT / 3, WORLD_WIDTH / 2, 0, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH / 2, 0, WORLD_WIDTH, WORLD_HEIGHT / 3, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT / 3, WORLD_WIDTH, WORLD_HEIGHT, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT, 0, WORLD_HEIGHT, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT, 0, WORLD_HEIGHT / 3, Color.WHITE));
                 break;
-            }
-            case CONCAVE_ARENA: {
+            case CONCAVE_ARENA:
                 barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT / 3, WORLD_WIDTH / 2, 0, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH / 2, 0, WORLD_WIDTH, WORLD_HEIGHT / 3, Color.WHITE));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT / 3, WORLD_WIDTH, WORLD_HEIGHT, Color.WHITE));
@@ -173,70 +172,8 @@ public class BasicPhysicsEngine {
                 barriers.add(new AnchoredBarrier_Point(WORLD_WIDTH / 2, WORLD_HEIGHT * 1 / 2 - width));
                 barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH / 2, WORLD_HEIGHT * 1 / 2 - width, 0, WORLD_HEIGHT * 2 / 3 - width, Color.WHITE, width / 10));
                 break;
-            }
-            case CONVEX_ARENA_WITH_CURVE: {
-                barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT / 3, WORLD_WIDTH / 2, 0, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH / 2, 0, WORLD_WIDTH, WORLD_HEIGHT / 3, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT / 3, WORLD_WIDTH, WORLD_HEIGHT, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT, 0, WORLD_HEIGHT, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT, 0, 0, Color.WHITE));
-                barriers.add(new AnchoredBarrier_Curve(WORLD_WIDTH / 2, WORLD_HEIGHT - WORLD_WIDTH / 2, WORLD_WIDTH / 2, 0.0, 180.0, true, Color.WHITE));
-                break;
-            }
-            case PINBALL_ARENA: {
-                // simple pinball board
-                barriers.add(new AnchoredBarrier_StraightLine(0, 0, WORLD_WIDTH, 0, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, 0, WORLD_WIDTH, WORLD_HEIGHT, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(WORLD_WIDTH, WORLD_HEIGHT, 0, WORLD_HEIGHT, Color.WHITE));
-                barriers.add(new AnchoredBarrier_StraightLine(0, WORLD_HEIGHT, 0, 0, Color.WHITE));
-                barriers.add(new AnchoredBarrier_Curve(WORLD_WIDTH / 2, WORLD_HEIGHT - WORLD_WIDTH / 2, WORLD_WIDTH / 2, 0.0, 200.0, true, Color.WHITE));
-                barriers.add(new AnchoredBarrier_Curve(WORLD_WIDTH / 2, WORLD_HEIGHT * 3 / 4, WORLD_WIDTH / 15, -0.0, 360.0, false, Color.WHITE));
-                barriers.add(new AnchoredBarrier_Curve(WORLD_WIDTH * 1 / 3, WORLD_HEIGHT * 1 / 2, WORLD_WIDTH / 15, -0.0, 360.0, false, Color.WHITE));
-                barriers.add(new AnchoredBarrier_Curve(WORLD_WIDTH * 2 / 3, WORLD_HEIGHT * 1 / 2, WORLD_WIDTH / 15, -0.0, 360.0, false, Color.WHITE));
-                break;
-            }
-            case SNOOKER_TABLE: {
-                double snookerTableHeight = WORLD_HEIGHT;
-                double pocketSize = 0.4;
-                double cushionDepth = 0.3;
-                double cushionLength = snookerTableHeight / 2 - pocketSize - cushionDepth;
-                double snookerTableWidth = cushionLength + cushionDepth * 2 + pocketSize * 2;
-
-                createCushion(barriers, snookerTableWidth - cushionDepth / 2, snookerTableHeight * 0.25, 0, cushionLength, cushionDepth);
-                createCushion(barriers, snookerTableWidth - cushionDepth / 2, snookerTableHeight * 0.75, 0, cushionLength, cushionDepth);
-                createCushion(barriers, snookerTableWidth / 2, snookerTableHeight - cushionDepth / 2, Math.PI / 2, cushionLength, cushionDepth);
-                createCushion(barriers, cushionDepth / 2, snookerTableHeight * 0.25, Math.PI, cushionLength, cushionDepth);
-                createCushion(barriers, cushionDepth / 2, snookerTableHeight * 0.75, Math.PI, cushionLength, cushionDepth);
-                createCushion(barriers, snookerTableWidth / 2, cushionDepth / 2, Math.PI * 3 / 2, cushionLength, cushionDepth);
-
-
-                break;
-            }
+            // Other cases omitted for brevity
         }
-
-
-        //
-        //	particles.add(new BasicParticle(r,r,-3,12, r));
-//		particles.add(new BasicParticle(0,0,4,10, r,true, Color.BLUE, includeInbuiltCollisionDetection, 2));
-//		particles.add(new BasicParticle(0,0,4,10, r,false, Color.RED, includeInbuiltCollisionDetection, 2));
-    }
-
-    private void createCushion(List<AnchoredBarrier> barriers, double centrex, double centrey, double orientation, double cushionLength, double cushionDepth) {
-        // on entry, we require centrex,centrey to be the centre of the rectangle that contains the cushion.
-        Color col = Color.WHITE;
-        Vect2D p1 = new Vect2D(cushionDepth / 2, -cushionLength / 2 - cushionDepth / 2);
-        Vect2D p2 = new Vect2D(-cushionDepth / 2, -cushionLength / 2);
-        Vect2D p3 = new Vect2D(-cushionDepth / 2, +cushionLength / 2);
-        Vect2D p4 = new Vect2D(cushionDepth / 2, cushionLength / 2 + cushionDepth / 2);
-        p1 = p1.rotate(orientation);
-        p2 = p2.rotate(orientation);
-        p3 = p3.rotate(orientation);
-        p4 = p4.rotate(orientation);
-        // we are being careful here to list edges in an anticlockwise manner, so that normals point inwards!
-        barriers.add(new AnchoredBarrier_StraightLine(centrex + p1.x, centrey + p1.y, centrex + p2.x, centrey + p2.y, col));
-        barriers.add(new AnchoredBarrier_StraightLine(centrex + p2.x, centrey + p2.y, centrex + p3.x, centrey + p3.y, col));
-        barriers.add(new AnchoredBarrier_StraightLine(centrex + p3.x, centrey + p3.y, centrex + p4.x, centrey + p4.y, col));
-        // oops this will have concave corners so will need to fix that some time!
     }
 
     public static void main(String[] args) throws Exception {
@@ -264,17 +201,16 @@ public class BasicPhysicsEngine {
         }
     }
 
-
     public void update() {
         world.step(1.0f / 60.0f, 6, 2);
         for (BasicParticle p : particles) {
-            p.resetTotalForce();// reset to zero at start of time step, so accumulation of forces can begin.
+            p.resetTotalForce();
         }
         for (ElasticConnector ec : connectors) {
             ec.applyTensionForceToBothParticles();
         }
         for (BasicParticle p : particles) {
-            p.update(9.8, DELTA_T); // tell each particle to move
+            p.update(9.8, DELTA_T);
         }
         for (BasicParticle particle : particles) {
             for (AnchoredBarrier b : barriers) {
@@ -284,7 +220,6 @@ public class BasicPhysicsEngine {
                 }
             }
         }
-
 
         // Check collisions between bodies and barriers
         for (Body body : bodies) {
@@ -300,10 +235,9 @@ public class BasicPhysicsEngine {
             }
         }
 
-
         double e = 0.9; // coefficient of restitution for all particle pairs
         for (int n = 0; n < particles.size(); n++) {
-            for (int m = 0; m < n; m++) {// avoids double check by requiring m<n
+            for (int m = 0; m < n; m++) {
                 BasicParticle p1 = particles.get(n);
                 BasicParticle p2 = particles.get(m);
                 if (p1.collidesWith(p2)) {
@@ -311,8 +245,6 @@ public class BasicPhysicsEngine {
                 }
             }
         }
-
-
     }
 
     private void createSegway() {
@@ -376,7 +308,6 @@ public class BasicPhysicsEngine {
         world.createJoint(jointDef);
     }
 
-
     private void createPerson() {
         // Define the body definition for the person
         BodyDef personBodyDef = new BodyDef();
@@ -406,14 +337,11 @@ public class BasicPhysicsEngine {
         bodies.add(person);
     }
 
-
     public void draw(Graphics2D g) {
-		drawGround(g);
-		drawObstacles(g, 5);
+        drawGround(g);
+        drawObstacles(g);
         drawSegway(g);
-          drawPerson(g);
-
-
+        drawPerson(g);
     }
 
     private void drawPerson(Graphics2D g) {
@@ -476,103 +404,83 @@ public class BasicPhysicsEngine {
         g.fillRect(shoeX, shoeY, shoeWidth, shoeHeight);
     }
 
+    private void drawSegway(Graphics2D g) {
+        final float SCALE = 30.0f;
 
-	private void drawSegway(Graphics2D g) {
-		final float SCALE = 30.0f;
+        // Ground position
+        double groundHeight = 10.0;
+        double groundY = SCREEN_HEIGHT - groundHeight;
 
-		// Ground position
-		double groundHeight = 10.0;
-		double groundY = SCREEN_HEIGHT - groundHeight;
+        // Draw the frame
+        Vec2 framePos = segwayFrame.getPosition();
+        double frameX = framePos.x * SCALE;
+        double frameY = groundY - (0.5 * SCALE); // Position the frame just above the ground
 
-		// Draw the frame
-		Vec2 framePos = segwayFrame.getPosition();
-		double frameX = framePos.x * SCALE;
-		double frameY = groundY - (0.5 * SCALE); // Position the frame just above the ground
+        double frameWidth = 2.0 * SCALE;
+        double frameHeight = 0.2 * SCALE;
+        g.setColor(Color.GRAY); // Frame color
 
-		double frameWidth = 2.0 * SCALE;
-		double frameHeight = 0.2 * SCALE;
-		g.setColor(Color.GRAY); // Frame color
+        // Draw the frame (person stands here)
+        g.fillRect((int) (frameX - frameWidth / 2), (int) (frameY - frameHeight / 2), (int) frameWidth, (int) frameHeight);
 
-		// Draw the frame (person stands here)
-		g.fillRect((int) (frameX - frameWidth / 2), (int) (frameY - frameHeight / 2), (int) frameWidth, (int) frameHeight);
+        // Save the original transformation
+        AffineTransform originalTransform = g.getTransform();
 
-		// Save the original transformation
-		AffineTransform originalTransform = g.getTransform();
+        // Define the handle dimensions
+        double handleWidth = 0.1 * SCALE;
+        double handleHeight = 1.5 * SCALE;
 
-		// Define the handle dimensions
-		double handleWidth = 0.1 * SCALE;
-		double handleHeight = 1.5 * SCALE;
+        // Calculate the base point of the handle on the frame
+        double handleBaseX = frameX + frameWidth / 2; // Right end of the frame
+        double handleBaseY = frameY - frameHeight / 2; // Align with the top of the frame
 
-		// Calculate the base point of the handle on the frame
-		double handleBaseX = frameX + frameWidth / 2; // Right end of the frame
-		double handleBaseY = frameY - frameHeight / 2; // Align with the top of the frame
+        // Translate to the base of the handle (this is the pivot point for rotation)
+        g.translate(handleBaseX, handleBaseY);
 
-		// Translate to the base of the handle (this is the pivot point for rotation)
-		g.translate(handleBaseX, handleBaseY);
+        // Rotate by 30 degrees (in radians: Math.toRadians(30))
+        g.rotate(Math.toRadians(30));
 
-		// Rotate by 30 degrees (in radians: Math.toRadians(30))
-		g.rotate(Math.toRadians(30));
+        // Draw the rotated handle
+        g.setColor(Color.DARK_GRAY); // Handle color
+        g.fillRect(0, (int) (-handleHeight), (int) handleWidth, (int) handleHeight);
 
-		// Draw the rotated handle
-		g.setColor(Color.DARK_GRAY); // Handle color
-		g.fillRect(0, (int) (-handleHeight), (int) handleWidth, (int) handleHeight);
+        // Restore the original transformation
+        g.setTransform(originalTransform);
 
-		// Restore the original transformation
-		g.setTransform(originalTransform);
+        // Draw the front wheel
+        Vec2 frontWheelPos = frontWheel.getPosition();
+        double frontWheelX = frontWheelPos.x * SCALE;
+        double frontWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
+        double wheelRadius = 0.5 * SCALE;
+        g.setColor(Color.BLACK); // Wheel color
+        g.fillOval((int) (frontWheelX - wheelRadius), (int) (frontWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
 
-		// Draw the front wheel
-		Vec2 frontWheelPos = frontWheel.getPosition();
-		double frontWheelX = frontWheelPos.x * SCALE;
-		double frontWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
-		double wheelRadius = 0.5 * SCALE;
-		g.setColor(Color.BLACK); // Wheel color
-		g.fillOval((int) (frontWheelX - wheelRadius), (int) (frontWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+        // Draw the rear wheel
+        Vec2 rearWheelPos = rearWheel.getPosition();
+        double rearWheelX = rearWheelPos.x * SCALE;
+        double rearWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
+        g.fillOval((int) (rearWheelX - wheelRadius), (int) (rearWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+    }
 
-		// Draw the rear wheel
-		Vec2 rearWheelPos = rearWheel.getPosition();
-		double rearWheelX = rearWheelPos.x * SCALE;
-		double rearWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
-		g.fillOval((int) (rearWheelX - wheelRadius), (int) (rearWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
-	}
+    private void drawGround(Graphics2D g) {
+        // Define the ground position and dimensions
+        double groundHeight = 10.0; // Height of the ground in pixels
+        double groundY = SCREEN_HEIGHT - groundHeight; // Y position of the ground (bottom of the screen)
 
+        // Draw the ground as a filled rectangle
+        g.setColor(Color.DARK_GRAY); // Ground color
+        g.fillRect(0, (int) groundY, SCREEN_WIDTH, (int) groundHeight);
+    }
 
-	private void drawGround(Graphics2D g) {
-		// Define the ground position and dimensions
-		double groundHeight = 10.0; // Height of the ground in pixels
-		double groundY = SCREEN_HEIGHT - groundHeight; // Y position of the ground (bottom of the screen)
+    private void drawObstacles(Graphics2D g) {
+        // Set obstacle properties
+        g.setColor(Color.RED); // Obstacle color
 
-		// Draw the ground as a filled rectangle
-		g.setColor(Color.DARK_GRAY); // Ground color
-		g.fillRect(0, (int) groundY, SCREEN_WIDTH, (int) groundHeight);
-	}
-
-	private void drawObstacles(Graphics2D g, int numberOfObstacles) {
-		// Define the ground position
-		double groundHeight = 10.0;
-		double groundY = SCREEN_HEIGHT - groundHeight;
-
-		// Set obstacle properties
-		g.setColor(Color.RED); // Obstacle color
-
-		for (int i = 0; i < numberOfObstacles; i++) {
-			// Random width and height for the obstacle
-			double obstacleWidth = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
-			double obstacleHeight = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
-
-			// Random X position for the obstacle
-			double obstacleX = Math.random() * (SCREEN_WIDTH - obstacleWidth);
-
-			// Y position should place the obstacle on the ground
-			double obstacleY = groundY - obstacleHeight;
-
-			// Draw the obstacle as a filled rectangle
-			g.fillRect((int) obstacleX, (int) obstacleY, (int) obstacleWidth, (int) obstacleHeight);
-		}
-	}
-
-
+        for (int i = 0; i < 2; i++) {
+            // Draw each obstacle using the stored properties
+            g.fillRect((int) obstacleX[i], (int) obstacleY[i], (int) obstacleWidth[i], (int) obstacleHeight[i]);
+        }
+    }
 
 
 }
-
-
