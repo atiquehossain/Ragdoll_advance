@@ -19,6 +19,8 @@ import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.joints.RevoluteJointDef;
 
+import javax.swing.*;
+
 public class BasicPhysicsEngine {
     /* Author: Michael Fairbank
      * Creation Date: 2016-01-28
@@ -149,6 +151,23 @@ public class BasicPhysicsEngine {
         // The while loop ensures that the obstacles have a sufficient gap between them
     }
 
+    public void moveObstacleCloser(double speed) {
+        for (int i = 0; i < 2; i++) {
+            obstacleX[i] -= speed;
+            if (obstacleX[i] < 0) {
+                obstacleX[i] = SCREEN_WIDTH; // Wrap-around to the other side of the screen
+            }
+        }
+    }
+
+
+    public void jumpSegwayPerson() {
+        Vec2 jumpForce = new Vec2(0, 5);
+        person.applyLinearImpulse(jumpForce, person.getWorldCenter());
+      //  person.applyLinearImpulse(jumpForce, person.getWorldCenter());
+    }
+
+
 
     private void defineBarriers(LayoutMode layout) {
         switch (layout) {
@@ -186,7 +205,7 @@ public class BasicPhysicsEngine {
         final BasicPhysicsEngine game = new BasicPhysicsEngine();
         final BasicView view = new BasicView(game);
         JEasyFrame frame = new JEasyFrame(view, "Basic Physics Engine");
-        frame.addKeyListener(new BasicKeyListener());
+        frame.addKeyListener(new BasicKeyListener(game)); // Pass the game instance here
         view.addMouseMotionListener(new BasicMouseListener());
         game.startThread(view);
     }
@@ -213,6 +232,10 @@ public class BasicPhysicsEngine {
 
     public void update() {
         if (gameOver) return;
+        // Move obstacles if right key is pressed
+        if (BasicKeyListener.isRotateRightKeyPressed()) {
+            moveObstacleCloser(1.1);
+        }
         world.step(1.0f / 60.0f, 6, 2);
         checkCollisionWithObstacles();
         for (BasicParticle p : particles) {
@@ -261,19 +284,16 @@ public class BasicPhysicsEngine {
 
     private void checkCollisionWithObstacles() {
         for (int i = 0; i < 2; i++) {
-            // Check collision with the segway frame
             if (isColliding(segwayFrame.getPosition(), obstacleX[i], obstacleY[i], obstacleWidth[i], obstacleHeight[i])) {
                 gameOver = true;
-                System.out.println("Game Over! Collision detected with an obstacle.");
+                showGameOverPopup();
                 return;
             }
-            // Check collision with the person
             if (isColliding(person.getPosition(), obstacleX[i], obstacleY[i], obstacleWidth[i], obstacleHeight[i])) {
                 gameOver = true;
-                System.out.println("Game Over! Collision detected with an obstacle.");
+                showGameOverPopup();
                 return;
             }
-            // Add checks for frontWheel and rearWheel if needed
         }
     }
 
@@ -285,7 +305,10 @@ public class BasicPhysicsEngine {
     }
 
 
-
+    private void showGameOverPopup() {
+        JOptionPane.showMessageDialog(null, "Game Over! ");
+        System.exit(0);  // Exits the application after the game over popup
+    }
 
 
     private void createSegway() {
@@ -350,20 +373,16 @@ public class BasicPhysicsEngine {
     }
 
     private void createPerson() {
-        // Define the body definition for the person
         BodyDef personBodyDef = new BodyDef();
         personBodyDef.type = BodyType.DYNAMIC;
 
-        // Position the person above the Segway frame
-        float segwayHeight = 0.2f; // Frame height from createSegway()
-        float wheelRadius = 0.5f; // Wheel radius from createSegway()
-        float personHeight = 1.5f; // Approximate height of the person
+        float segwayHeight = 0.2f;
+        float wheelRadius = 0.5f;
+        float personHeight = 1.5f;
         personBodyDef.position.set(WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + segwayHeight / 2 + wheelRadius + personHeight / 2);
 
-        // Create the body in the world
         person = world.createBody(personBodyDef);
 
-        // Create the head (circle shape)
         CircleShape headShape = new CircleShape();
         headShape.m_radius = 0.3f;
 
@@ -374,7 +393,6 @@ public class BasicPhysicsEngine {
 
         person.createFixture(headFixture);
 
-        // Add the person to the bodies list
         bodies.add(person);
     }
 
@@ -388,10 +406,10 @@ public class BasicPhysicsEngine {
     private void drawPerson(Graphics2D g) {
         Vec2 personPos = person.getPosition();
         double x = personPos.x * SCALE;
-        double y = SCREEN_HEIGHT - (personPos.y * SCALE); // Invert Y for screen coordinates
+        double y = SCREEN_HEIGHT - (personPos.y * SCALE);
 
-        int personHeight = (int) (SCALE * 4); // Height of the person in pixels
-        int personWidth = (int) (SCALE * 1.5); // Width of the person in pixels
+        int personHeight = (int) (SCALE * 4);
+        int personWidth = (int) (SCALE * 1.5);
         int bodyHeight = personHeight - personWidth;
         int legWidth = personWidth / 2;
         int legHeight = bodyHeight / 2;
@@ -411,20 +429,16 @@ public class BasicPhysicsEngine {
 
         g.setStroke(new BasicStroke(5));
 
-        // Draw the head
-        g.setColor(new Color(255, 224, 189)); // Skin color
+        g.setColor(new Color(255, 224, 189));
         g.fillOval(headX, headY, personWidth, personWidth);
 
-        // Draw the helmet
         g.setColor(Color.ORANGE);
         g.fillOval(headX, headY, personWidth, personWidth / 2);
 
-        // Draw the body
-        g.setColor(new Color(255, 165, 0)); // Uniform color
+        g.setColor(new Color(255, 165, 0));
         g.fillRect(bodyX, bodyY, personWidth, bodyHeight);
 
-        // Draw the right arm
-        g.setColor(new Color(128, 128, 128)); // Arm color
+        g.setColor(new Color(128, 128, 128));
         int rightArmStartX = (int) (x + armLength / 2);
         int rightArmStartY = armY;
         int rightArmEndX = rightArmStartX + 10;
@@ -436,14 +450,13 @@ public class BasicPhysicsEngine {
         g.setColor(Color.BLACK);
         g.fillOval(shortHorizontalEndX, rightArmEndY - 5, 20, 15);
 
-        // Draw the legs
-        g.setColor(new Color(255, 165, 0)); // Pant color
+        g.setColor(new Color(255, 165, 0));
         g.fillRect(legX, legY, legWidth, legHeight);
 
-        // Draw the shoes
         g.setColor(Color.GREEN);
         g.fillRect(shoeX, shoeY, shoeWidth, shoeHeight);
     }
+
 
     private void drawSegway(Graphics2D g) {
         final float SCALE = 30.0f;
@@ -547,6 +560,8 @@ public class BasicPhysicsEngine {
             g.fillRect((int) obstacleX[i], (int) obstacleY[i], (int) obstacleWidth[i], (int) obstacleHeight[i]);
         }
     }
+
+
 
 
 }

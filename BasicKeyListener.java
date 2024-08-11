@@ -4,11 +4,13 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 public class BasicKeyListener extends KeyAdapter {
-	/* Author: Michael Fairbank
-	 * Creation Date: 2016-01-28
-	 * Significant changes applied:
-	 */
-	private static boolean rotateRightKeyPressed, rotateLeftKeyPressed, thrustKeyPressed; 
+	private BasicPhysicsEngine engine;
+
+	public BasicKeyListener(BasicPhysicsEngine engine) {
+		this.engine = engine;
+	}
+
+	private static boolean rotateRightKeyPressed, rotateLeftKeyPressed, thrustKeyPressed;
 
 	public static boolean isRotateRightKeyPressed() {
 		return rotateRightKeyPressed;
@@ -21,35 +23,37 @@ public class BasicKeyListener extends KeyAdapter {
 	public static boolean isThrustKeyPressed() {
 		return thrustKeyPressed;
 	}
-	
 
+	@Override
 	public void keyPressed(KeyEvent e) {
-        int keyCode = e.getKeyCode();
-        switch (keyCode) {
-            case KeyEvent.VK_LEFT:
-               
-                break;
-            case KeyEvent.VK_RIGHT:
-                
-                break;
-            case KeyEvent.VK_SPACE:
-                
-                break;
-        }
-    }
+		int keyCode = e.getKeyCode();
+		switch (keyCode) {
+			case KeyEvent.VK_LEFT:
+				rotateLeftKeyPressed = true;
+				break;
+			case KeyEvent.VK_RIGHT:
+				rotateRightKeyPressed = true;
+				break;
+			case KeyEvent.VK_SPACE:
+				thrustKeyPressed = true;
+				engine.jumpSegwayPerson();
+				break;
+		}
+	}
 
+	@Override
 	public void keyReleased(KeyEvent e) {
 		int key = e.getKeyCode();
 		switch (key) {
-		case KeyEvent.VK_UP:
-			thrustKeyPressed=false;
-			break;
-		case KeyEvent.VK_LEFT:
-			rotateLeftKeyPressed=false;
-			break;
-		case KeyEvent.VK_RIGHT:
-			rotateRightKeyPressed=false;
-			break;
+			case KeyEvent.VK_LEFT:
+				rotateLeftKeyPressed = false;
+				break;
+			case KeyEvent.VK_RIGHT:
+				rotateRightKeyPressed = false;
+				break;
+			case KeyEvent.VK_SPACE:
+				thrustKeyPressed = false;
+				break;
 		}
 	}
 }
