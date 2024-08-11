@@ -43,23 +43,29 @@ public class BasicPhysicsEngine {
 
     // sleep time between two drawn frames in milliseconds
     public static final int DELAY = 20;
-    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH=10;
+    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH = 10;
     // estimate for time between two frames in seconds
-    public static final double DELTA_T = DELAY / 1000.0 / NUM_EULER_UPDATES_PER_SCREEN_REFRESH ;
+    public static final double DELTA_T = DELAY / 1000.0 / NUM_EULER_UPDATES_PER_SCREEN_REFRESH;
+
+    private boolean gameOver = false;
+
 
 
     public static int convertWorldXtoScreenX(double worldX) {
-        return (int) (worldX/WORLD_WIDTH*SCREEN_WIDTH);
+        return (int) (worldX / WORLD_WIDTH * SCREEN_WIDTH);
     }
+
     public static int convertWorldYtoScreenY(double worldY) {
         // minus sign in here is because screen coordinates are upside down.
-        return (int) (SCREEN_HEIGHT-(worldY/WORLD_HEIGHT*SCREEN_HEIGHT));
+        return (int) (SCREEN_HEIGHT - (worldY / WORLD_HEIGHT * SCREEN_HEIGHT));
     }
+
     public static int convertWorldLengthToScreenLength(double worldLength) {
-        return (int) (worldLength/WORLD_WIDTH*SCREEN_WIDTH);
+        return (int) (worldLength / WORLD_WIDTH * SCREEN_WIDTH);
     }
+
     public static double convertScreenXtoWorldX(int screenX) {
-        return screenX*WORLD_WIDTH/SCREEN_WIDTH;
+        return screenX * WORLD_WIDTH / SCREEN_WIDTH;
         //throw new RuntimeException("Not implemented");
         // TODO: For speed, just copy your solution from lab 3 into here
         // to get this to work you need to program the inverse function to convertWorldXtoScreenX
@@ -70,8 +76,9 @@ public class BasicPhysicsEngine {
         // Note that a common problem students have found here is that integer truncation happens if you divide two ints in java, e.g. 2/3 is 0!!
         // To work around this problem, instead of x/y, do "((double)x)/((double)y)" or similar.  (Actually, you only need to cast either one of them to a double, not both).
     }
+
     public static double convertScreenYtoWorldY(int screenY) {
-        return (SCREEN_HEIGHT-screenY)*WORLD_HEIGHT/SCREEN_HEIGHT;
+        return (SCREEN_HEIGHT - screenY) * WORLD_HEIGHT / SCREEN_HEIGHT;
         //throw new RuntimeException("Not implemented");
         // to get this to work you need to program the inverse function to convertWorldYtoScreenY
         // this means rearranging the equation z= (SCREEN_HEIGHT-(worldY/WORLD_HEIGHT*SCREEN_HEIGHT)) to make
@@ -87,7 +94,6 @@ public class BasicPhysicsEngine {
     private double[] obstacleY = new double[2];
     private double[] obstacleWidth = new double[2];
     private double[] obstacleHeight = new double[2];
-
 
 
     public List<BasicParticle> particles;
@@ -187,7 +193,11 @@ public class BasicPhysicsEngine {
 
     private void startThread(final BasicView view) throws InterruptedException {
         final BasicPhysicsEngine game = this;
-        while (true) {
+       /* while (true) {
+            for (int i = 0; i < NUM_EULER_UPDATES_PER_SCREEN_REFRESH; i++) {
+                game.update();
+            }*/
+        while (!gameOver) {
             for (int i = 0; i < NUM_EULER_UPDATES_PER_SCREEN_REFRESH; i++) {
                 game.update();
             }
@@ -202,7 +212,9 @@ public class BasicPhysicsEngine {
     }
 
     public void update() {
+        if (gameOver) return;
         world.step(1.0f / 60.0f, 6, 2);
+        checkCollisionWithObstacles();
         for (BasicParticle p : particles) {
             p.resetTotalForce();
         }
@@ -246,6 +258,35 @@ public class BasicPhysicsEngine {
             }
         }
     }
+
+    private void checkCollisionWithObstacles() {
+        for (int i = 0; i < 2; i++) {
+            // Check collision with the segway frame
+            if (isColliding(segwayFrame.getPosition(), obstacleX[i], obstacleY[i], obstacleWidth[i], obstacleHeight[i])) {
+                gameOver = true;
+                System.out.println("Game Over! Collision detected with an obstacle.");
+                return;
+            }
+            // Check collision with the person
+            if (isColliding(person.getPosition(), obstacleX[i], obstacleY[i], obstacleWidth[i], obstacleHeight[i])) {
+                gameOver = true;
+                System.out.println("Game Over! Collision detected with an obstacle.");
+                return;
+            }
+            // Add checks for frontWheel and rearWheel if needed
+        }
+    }
+
+    private boolean isColliding(Vec2 bodyPos, double obsX, double obsY, double obsWidth, double obsHeight) {
+        float bodyX = bodyPos.x * SCALE;
+        float bodyY = SCREEN_HEIGHT - (bodyPos.y * SCALE);
+
+        return bodyX > obsX && bodyX < obsX + obsWidth && bodyY > obsY && bodyY < obsY + obsHeight;
+    }
+
+
+
+
 
     private void createSegway() {
         // Define the body definition for the Segway frame
@@ -484,7 +525,6 @@ public class BasicPhysicsEngine {
             g.drawLine((int) wheelX, (int) wheelY, (int) (wheelX + spokeX), (int) (wheelY + spokeY));
         }
     }
-
 
 
     private void drawGround(Graphics2D g) {
