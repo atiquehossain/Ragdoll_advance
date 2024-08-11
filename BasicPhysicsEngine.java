@@ -137,14 +137,14 @@ public class BasicPhysicsEngine {
         // Initialize the first obstacle
         obstacleWidth[0] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
         obstacleHeight[0] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
-        obstacleX[0] = Math.random() * (SCREEN_WIDTH - obstacleWidth[0]);
+        obstacleX[0] = Math.random() * (5 - obstacleWidth[0]);
         obstacleY[0] = groundY - obstacleHeight[0];
 
         // Initialize the second obstacle
         do {
             obstacleWidth[1] = 20 + Math.random() * 40;  // Random width between 20 and 60 pixels
             obstacleHeight[1] = 20 + Math.random() * 40; // Random height between 20 and 60 pixels
-            obstacleX[1] = Math.random() * (SCREEN_WIDTH - obstacleWidth[1]);
+            obstacleX[1] = Math.random() * (900 - obstacleWidth[1]);
             obstacleY[1] = groundY - obstacleHeight[1];
         } while (Math.abs(obstacleX[1] - obstacleX[0]) < obstacleWidth[0] + obstacleWidth[1]);
 
@@ -392,8 +392,8 @@ public class BasicPhysicsEngine {
         headFixture.friction = 0.3f;
 
         person.createFixture(headFixture);
-
         bodies.add(person);
+
     }
 
     public void draw(Graphics2D g) {
