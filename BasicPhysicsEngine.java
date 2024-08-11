@@ -45,7 +45,7 @@ public class BasicPhysicsEngine {
 
     // sleep time between two drawn frames in milliseconds
     public static final int DELAY = 20;
-    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH = 10;
+    public static final int NUM_EULER_UPDATES_PER_SCREEN_REFRESH = 30;
     // estimate for time between two frames in seconds
     public static final double DELTA_T = DELAY / 1000.0 / NUM_EULER_UPDATES_PER_SCREEN_REFRESH;
 
