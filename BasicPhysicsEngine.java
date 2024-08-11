@@ -428,7 +428,7 @@ public class BasicPhysicsEngine {
 
         // Define the handle dimensions
         double handleWidth = 0.1 * SCALE;
-        double handleHeight = 1.5 * SCALE;
+        double handleHeight = 2 * SCALE;
 
         // Calculate the base point of the handle on the frame
         double handleBaseX = frameX + frameWidth / 2; // Right end of the frame
@@ -438,7 +438,7 @@ public class BasicPhysicsEngine {
         g.translate(handleBaseX, handleBaseY);
 
         // Rotate by 30 degrees (in radians: Math.toRadians(30))
-        g.rotate(Math.toRadians(30));
+        g.rotate(Math.toRadians(25));
 
         // Draw the rotated handle
         g.setColor(Color.DARK_GRAY); // Handle color
@@ -447,20 +447,45 @@ public class BasicPhysicsEngine {
         // Restore the original transformation
         g.setTransform(originalTransform);
 
-        // Draw the front wheel
-        Vec2 frontWheelPos = frontWheel.getPosition();
-        double frontWheelX = frontWheelPos.x * SCALE;
-        double frontWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
-        double wheelRadius = 0.5 * SCALE;
-        g.setColor(Color.BLACK); // Wheel color
-        g.fillOval((int) (frontWheelX - wheelRadius), (int) (frontWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+        // Draw the front wheel with spokes
+        drawWheel(g, frontWheel, SCALE, groundY);
 
-        // Draw the rear wheel
-        Vec2 rearWheelPos = rearWheel.getPosition();
-        double rearWheelX = rearWheelPos.x * SCALE;
-        double rearWheelY = groundY - (0.5 * SCALE); // Position the wheel just above the ground
-        g.fillOval((int) (rearWheelX - wheelRadius), (int) (rearWheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+        // Draw the rear wheel with spokes
+        drawWheel(g, rearWheel, SCALE, groundY);
     }
+
+    private void drawWheel(Graphics2D g, Body wheel, float scale, double groundY) {
+        Vec2 wheelPos = wheel.getPosition();
+        double wheelX = wheelPos.x * scale;
+        double wheelY = groundY - (0.5 * scale); // Position the wheel just above the ground
+        double wheelRadius = 0.5 * scale;
+
+        // Draw the tire (outer circle)
+        g.setColor(Color.DARK_GRAY);
+        double tireRadius = wheelRadius + 0.1 * scale; // Slightly larger radius for the tire
+        g.fillOval((int) (wheelX - tireRadius), (int) (wheelY - tireRadius), (int) (2 * tireRadius), (int) (2 * tireRadius));
+
+        // Draw the wheel rim (inner circle)
+        g.setColor(Color.BLACK);
+        g.fillOval((int) (wheelX - wheelRadius), (int) (wheelY - wheelRadius), (int) (2 * wheelRadius), (int) (2 * wheelRadius));
+
+        // Draw the wheel hub (smaller circle in the center)
+        g.setColor(Color.GRAY);
+        double hubRadius = 0.2 * scale;
+        g.fillOval((int) (wheelX - hubRadius), (int) (wheelY - hubRadius), (int) (2 * hubRadius), (int) (2 * hubRadius));
+
+        // Draw the spokes
+        g.setStroke(new BasicStroke(2)); // Set stroke for the spokes
+        g.setColor(Color.LIGHT_GRAY);
+        for (int i = 0; i < 8; i++) { // 8 spokes
+            double angle = Math.toRadians(i * 45); // Spokes at every 45 degrees
+            double spokeX = Math.cos(angle) * wheelRadius;
+            double spokeY = Math.sin(angle) * wheelRadius;
+            g.drawLine((int) wheelX, (int) wheelY, (int) (wheelX + spokeX), (int) (wheelY + spokeY));
+        }
+    }
+
+
 
     private void drawGround(Graphics2D g) {
         // Define the ground position and dimensions
@@ -468,7 +493,8 @@ public class BasicPhysicsEngine {
         double groundY = SCREEN_HEIGHT - groundHeight; // Y position of the ground (bottom of the screen)
 
         // Draw the ground as a filled rectangle
-        g.setColor(Color.DARK_GRAY); // Ground color
+        Color bottomColor = new Color(101, 67, 33);
+        g.setColor(bottomColor); // Ground color
         g.fillRect(0, (int) groundY, SCREEN_WIDTH, (int) groundHeight);
     }
 
