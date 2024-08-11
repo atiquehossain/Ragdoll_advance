@@ -492,13 +492,12 @@ public class BasicPhysicsEngine {
         double frameHeight = 0.2 * SCALE;
         g.setColor(Color.GRAY); // Frame color
 
-        // Draw the frame (person stands here)
+
         g.fillRect((int) (frameX - frameWidth / 2), (int) (frameY - frameHeight / 2), (int) frameWidth, (int) frameHeight);
 
-        // Save the original transformation
         AffineTransform originalTransform = g.getTransform();
 
-        // Define the handle dimensions
+
         double handleWidth = 0.1 * SCALE;
         double handleHeight = 2.6 * SCALE;
 
@@ -584,11 +583,12 @@ public class BasicPhysicsEngine {
     }
 
     private void drawObstacles(Graphics2D g) {
-        // Set obstacle properties
-        g.setColor(Color.RED); // Obstacle color
+
+        Color bottomColor = new Color(101, 67, 33);
+        g.setColor(bottomColor);
 
         for (int i = 0; i < 2; i++) {
-            // Draw each obstacle using the stored properties
+
             g.fillRect((int) obstacleX[i], (int) obstacleY[i], (int) obstacleWidth[i], (int) obstacleHeight[i]);
         }
     }
